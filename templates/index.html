@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Calculator</title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <link rel="stylesheet"
+            href="{{ url_for('static', filename='styles/index.css')}}">
+    </head>
+    <body>
+        <div class="container">
+            <div class="container-calculator">
+                <div class="calculator">
+                    <input type="text" id="display" disabled />
+                    <div class="buttons">
+                      <button class="btn" onclick="appendNumber('7')">7</button>
+                      <button class="btn" onclick="appendNumber('8')">8</button>
+                      <button class="btn" onclick="appendNumber('9')">9</button>
+                      <button class="btn operator" onclick="appendOperator('/')">/</button>
+                
+                      <button class="btn" onclick="appendNumber('4')">4</button>
+                      <button class="btn" onclick="appendNumber('5')">5</button>
+                      <button class="btn" onclick="appendNumber('6')">6</button>
+                      <button class="btn operator" onclick="appendOperator('*')">×</button>
+                
+                      <button class="btn" onclick="appendNumber('1')">1</button>
+                      <button class="btn" onclick="appendNumber('2')">2</button>
+                      <button class="btn" onclick="appendNumber('3')">3</button>
+                      <button class="btn operator" onclick="appendOperator('-')">-</button>
+                
+                      <button class="btn" onclick="appendNumber('0')">0</button>
+                      <button class="btn" onclick="appendNumber('.')">.</button>
+                      <button class="btn operator" onclick="calculate()">=</button>
+                      <button class="btn operator" onclick="appendOperator('+')">+</button>
+                
+                      <button class="btn clear" onclick="clearDisplay()">C</button>
+                    </div>
+                  </div>
+            </div>
+            <div id="container-tree">
+
+            </div>
+        </div>
+        <script>
+            let display = document.getElementById('display');
+
+
+            function appendNumber(number) {
+                display.value += number;
+            }
+
+            function appendOperator(operator) {
+            if (display.value === '') return;
+                display.value += ` ${operator} `;
+            }
+
+            async function calculate() {
+                try {
+                    expression = display.value;
+                    display.value = eval(display.value.replace('×', '*').replace('÷', '/'));
+                    const response = await fetch("/calculate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: `expression=${encodeURIComponent(expression)}`,
+                    });
+                    const data = await response.json();
+                    if (response.ok) {
+                        drawTree(data.treeJson);
+                    } else {
+                        display.value = 'Error';
+                        console.log("Error de solicitud")
+                        console.log(data.error);
+                    } 
+                } catch (error) {
+                    console.log("Error de operacion");
+                    console.log(error);
+                    display.value = 'Error';
+                }
+            }
+
+            function clearDisplay() {
+                display.value = '';
+                d3.select("#container-tree").select("svg").remove();
+            }
+
+            function drawTree(treeData) {
+                console.log(treeData);
+
+                d3.select("#container-tree").select("svg").remove();
+
+                const width = 600;
+                const height = 400;
+                const svg = d3
+                    .select("#container-tree")
+                    .append("svg")
+                    .attr("width", width)
+                    .attr("height", height);
+
+                const g = svg.append("g").attr("transform", "translate(50, 50)");
+
+                const root = d3.hierarchy(treeData);
+
+                const treeLayout = d3.tree().size([width - 100, height - 100]);
+                treeLayout(root);
+
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter()
+                    .append("line")
+                    .attr("class", "link")
+                    .attr("x1", (d) => d.source.x)
+                    .attr("y1", (d) => d.source.y)
+                    .attr("x2", (d) => d.target.x)
+                    .attr("y2", (d) => d.target.y)
+                    .attr("stroke", "#80d0ff") 
+                    .attr("stroke-width", 1.5) 
+                    .attr("stroke-dasharray", "5,5");
+
+                const nodes = g
+                    .selectAll(".node")
+                    .data(root.descendants())
+                    .enter()
+                    .append("g")
+                    .attr("class", "node")
+                    .attr("transform", (d) => `translate(${d.x},${d.y})`);
+
+                nodes.append("circle")
+                    .attr("r", 20)
+                    .attr("fill", "url(#nodeGradient)")
+                    .attr("stroke", "#333") // Borde oscuro
+                    .attr("stroke-width", 2)
+                    .style("filter", "drop-shadow(3px 3px 5px rgba(0,0,0,0.3))"); // Sombra
+
+                svg.append("defs")
+                    .append("radialGradient")
+                    .attr("id", "nodeGradient")
+                    .selectAll("stop")
+                    .data([
+                        { offset: "0%", color: "#ffeb3b" }, 
+                        { offset: "100%", color: "#f57f17" }
+                    ])
+                    .enter()
+                    .append("stop")
+                    .attr("offset", (d) => d.offset)
+                    .attr("stop-color", (d) => d.color);
+
+
+                nodes.append("text")
+                    .attr("dy", 5)
+                    .attr("x", 0)
+                    .attr("text-anchor", "middle")
+                    .attr("fill", "#333") 
+                    .style("font-size", "14px")
+                    .style("font-weight", "bold")
+                    .style("text-shadow", "1px 1px 2px rgba(0,0,0,0.3)")
+                    .text((d) => d.data.name);
+            }
+
+        </script>
+    </body>
+</html>
