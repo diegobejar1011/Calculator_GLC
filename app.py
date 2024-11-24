@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 from lark import Lark, Tree, Token
+import ply.lex as lex
 
 app = Flask("Calculator")
 
@@ -18,6 +19,61 @@ NUMBER: /\d+(\.\d+)?/
 """
 
 parser = Lark(grammar, start='start', parser='lalr')
+
+tokens = (
+    'NUMBER',
+    'DECIMAL',
+    'PLUS',
+    'MINUS',
+    'TIMES',
+    'DIVIDE'
+)
+
+t_PLUS = r'\+'
+t_MINUS = r'-'
+t_TIMES = r'\*'
+t_DIVIDE = r'/'
+
+def t_DECIMAL(t):
+    r'\d+\.\d+'
+    t.value = float(t.value)
+    return t
+
+def t_NUMBER(t):
+    r'\d+'
+    t.value = int(t.value)
+    return t
+
+t_ignore = ' \t'
+
+def t_error(t):
+    print(f"Carácter no reconodico: {t.value[0]}")
+    t.lexer.skip(1)
+    
+lexer = lex.lex()
+
+def tokenize(expression):
+    token_list = []
+    int_count = 0
+    operator_count = 0
+    
+    lexer.input(expression)
+    for tok in lexer:
+        token_list.append({
+            'type': tok.type,
+            'value': tok.value
+        })
+        if tok.type == 'NUMBER':
+            int_count += 1
+        elif tok.type in ['PLUS', 'MINUS', 'TIMES', 'DIVIDE']:
+            operator_count += 1
+            
+    return {
+        "tokens": token_list,
+        "integer_count": int_count,
+        "operator_count": operator_count
+    }
+
 
 def toJson(tree):
     rename_map = {
@@ -46,7 +102,8 @@ def calculate():
         expression = request.form['expression']
         tree = parser.parse(expression)
         treeJson = toJson(tree) 
-        return jsonify({'treeJson': treeJson})
+        resolveLex = tokenize(expression)
+        return jsonify({'treeJson': treeJson}, resolveLex)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 

@@ -34,31 +34,62 @@
                       <button class="btn operator" onclick="calculate()">=</button>
                       <button class="btn operator" onclick="appendOperator('+')">+</button>
                 
-                      <button class="btn clear" onclick="clearDisplay()">C</button>
+                      <button class="btn operator clear" onclick="saveCache()">MS</button>
+                      <button class="btn operator clear" onclick="clearValue()">AC</button>
+                      <button class="btn operator clear" onclick="clearDisplay()">C</button>
                     </div>
                   </div>
             </div>
             <div id="container-tree">
 
             </div>
+            <div class="container-table">
+                <table border="1" id="tokensTable">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+                <table border="1" id="countTable">
+                    <thead>
+                        <tr>
+                            <th>Clasificación</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
         </div>
         <script>
             let display = document.getElementById('display');
-
+            let table = document.querySelector('#tokensTable tbody');
+            let count = document.querySelector('#countTable tbody');
+            let cache = "";
 
             function appendNumber(number) {
                 display.value += number;
             }
 
             function appendOperator(operator) {
-            if (display.value === '') return;
+            // if (display.value === '') return;
                 display.value += ` ${operator} `;
             }
 
             async function calculate() {
                 try {
                     expression = display.value;
-                    display.value = eval(display.value.replace('×', '*').replace('÷', '/'));
+                    console.log(cache + expression);
+                    expression = cache + expression;
+                    display.value = eval(expression.replace('×', '*').replace('÷', '/'));
+                    cache = "";
                     const response = await fetch("/calculate", {
                     method: "POST",
                     headers: {
@@ -67,8 +98,11 @@
                     body: `expression=${encodeURIComponent(expression)}`,
                     });
                     const data = await response.json();
+                    console.log(data[1])
                     if (response.ok) {
-                        drawTree(data.treeJson);
+                        drawTree(data[0].treeJson);
+                        createTable(data[1]);
+                        createCount(data[1]);
                     } else {
                         display.value = 'Error';
                         console.log("Error de solicitud")
@@ -83,11 +117,22 @@
 
             function clearDisplay() {
                 display.value = '';
+                table.innerHTML = '';
+                count.innerHTML = '';
                 d3.select("#container-tree").select("svg").remove();
             }
 
+            function saveCache() {
+                cache = display.value;
+                console.log(cache);
+            }
+
+            function clearValue(){
+                let expression = display.value.substring(0, display.value.length - 1);
+                display.value = expression;
+            }
+
             function drawTree(treeData) {
-                console.log(treeData);
 
                 d3.select("#container-tree").select("svg").remove();
 
@@ -159,6 +204,36 @@
                     .text((d) => d.data.name);
             }
 
+            function createTable(dataTable){
+                table.innerHTML = '';
+                tokens = dataTable.tokens;
+                tokens.forEach((token) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${token.type}</td>
+                        <td>${token.value}</td>
+                    `;
+                    table.appendChild(row);
+                });
+            }    
+            
+            function createCount(countTable){
+                count.innerHTML = '';
+                const rowInteger = document.createElement('tr');
+                rowInteger.innerHTML = `
+                    <td>Número enteros</td>
+                    <td>${countTable.integer_count}</td>
+                `;
+                count.appendChild(rowInteger);
+
+                const rowOperator = document.createElement('tr');
+                rowOperator.innerHTML = `
+                    <td>Operadores</td>
+                    <td>${countTable.operator_count}</td>
+                `;
+                count.appendChild(rowOperator);
+
+            }
         </script>
     </body>
 </html>

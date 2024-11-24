@@ -50,7 +50,6 @@ body {
 }
 
 .btn.clear {
-  grid-column: span 4;
   background-color: #d32f2f;
   color: #ffffff;
 }
@@ -95,4 +94,39 @@ body {
 
 #container-tree {
   flex: 2; 
+}
+
+table {
+  width: 80%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+
+thead {
+  background-color: #007bff;
+  color: white;
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+
+th {
+  font-weight: bold;
+}
+
+tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+tr:hover {
+  background-color: #e9ecef;
 }
